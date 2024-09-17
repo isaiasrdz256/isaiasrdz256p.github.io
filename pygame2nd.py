@@ -49,14 +49,17 @@ vms = [
 
 malware = [Actor('malware', choice(valid_positions)), Actor('malware', choice(valid_positions))]
 
+# Add this near the top of your file, with other global variables
+all_vms_solved_message_printed = False
+
 def on_mouse_down(pos):
     global game_state
     if game_state == 'start':
         if button_x <= pos[0] <= button_x + button_width and button_y <= pos[1] <= button_y + button_height:
-            game_state = 'playing'
+            game_state = 'prologue'  # Change to prologue state
 
 def update():
-    global resource_nodes, vms
+    global resource_nodes, vms, all_vms_solved_message_printed, game_state
     if game_state == 'playing':
         # Move the cloud character
         new_x, new_y = cloud.x, cloud.y
@@ -92,9 +95,11 @@ def update():
 
         # Check if all VMs are solved
         all_vms_solved = all(set(vm['resource_requirement']) == set(r['type'] for r in vm['resources']) for vm in vms)
-        if all_vms_solved:
+
+        if all_vms_solved and not all_vms_solved_message_printed:
             print("Good job! All VMs are correctly configured.")
-            # Here you can add code to move to the next level or end the game
+            all_vms_solved_message_printed = True
+            game_state = 'completed'  # Change game state to 'completed'
 
 def draw():
     screen.clear()
@@ -106,6 +111,32 @@ def draw():
         screen.draw.filled_rect(Rect((button_x, button_y), (button_width, button_height)), color="light blue")
         screen.draw.rect(Rect((button_x, button_y), (button_width, button_height)), color="navy")
         screen.draw.text("Start", center=(WIDTH/2, button_y + button_height/2), fontsize=30, color="navy")
+    
+    elif game_state == 'prologue':
+        screen.draw.text("Introduction to Cloud Computing", center=(WIDTH/2, HEIGHT/6), fontsize=40, color="white")
+        prologue_text = [
+            "Cloud computing is like renting a powerful computer over the internet.",
+            "Instead of owning physical hardware, you can use virtual resources",
+            "such as processing power, memory, and storage.",
+            "",
+            "In this game, you'll manage cloud resources:",
+            "- Collect CPU, RAM, and Storage",
+            "- Configure Virtual Machines (VMs) with these resources",
+            "- So that they can run your applications smoothly",
+            "- And users can access them from anywhere in the world",
+            "- Avoid malware that can harm your cloud infrastructure",
+            "",
+            "Press SPACE to continue to instructions"
+        ]
+        for i, line in enumerate(prologue_text):
+            screen.draw.text(line, center=(WIDTH/2, HEIGHT/3 + i*30), fontsize=20, color="white")
+    
+    elif game_state == 'instructions':
+        screen.draw.text("Instructions", center=(WIDTH/2, HEIGHT/4), fontsize=40, color="white")
+        screen.draw.text("1. Use arrow keys to move the cloud.", center=(WIDTH/2, HEIGHT/2 - 30), fontsize=30, color="white")
+        screen.draw.text("2. Collect resources and configure VMs.", center=(WIDTH/2, HEIGHT/2), fontsize=30, color="white")
+        screen.draw.text("3. Avoid malware.", center=(WIDTH/2, HEIGHT/2 + 30), fontsize=30, color="white")
+        screen.draw.text("Press SPACE to start playing", center=(WIDTH/2, HEIGHT*3/4), fontsize=30, color="white")
     
     elif game_state == 'playing':
         # Draw the maze
@@ -129,5 +160,71 @@ def draw():
         for enemy in malware:
             enemy.draw()
             screen.draw.text("Malware", enemy.pos)
+
+    elif game_state == 'completed':
+        screen.fill("black")
+        screen.draw.text("Congratulations!", center=(WIDTH/2, HEIGHT/3), fontsize=60, color="white")
+        screen.draw.text("You've completed the game!", center=(WIDTH/2, HEIGHT/2), fontsize=40, color="white")
+        screen.draw.text("Press SPACE to view credits", center=(WIDTH/2, HEIGHT*2/3), fontsize=30, color="white")
+    elif game_state == 'credits':
+        draw_credits()
+
+def on_key_down(key):
+    global game_state
+    if game_state == 'prologue' and key == keys.SPACE:
+        game_state = 'instructions'
+    elif game_state == 'instructions' and key == keys.SPACE:
+        game_state = 'playing'
+    elif game_state == 'completed' and key == keys.SPACE:
+        game_state = 'credits'
+    elif game_state == 'credits' and key == keys.SPACE:
+        reset_game()
+        game_state = 'start'
+
+def reset_game():
+    global cloud, resource_nodes, vms, malware, all_vms_solved_message_printed
+    
+    # Reset cloud position
+    cloud.pos = (50, 50)
+    
+    # Reset resources
+    valid_positions = get_valid_positions()
+    for resource in resource_nodes:
+        resource['actor'].pos = choice(valid_positions)
+        resource['collected'] = False
+    
+    # Reset VMs
+    for vm in vms:
+        vm['actor'].pos = choice(valid_positions)
+        vm['resources'] = []
+    
+    # Reset malware positions
+    for m in malware:
+        m.pos = choice(valid_positions)
+    
+    # Reset completion flag
+    all_vms_solved_message_printed = False
+
+def draw_credits():
+    screen.fill("black")
+    credits = [
+        "Cloud Resource Manager",
+        "",
+        "Developed by:",
+        "Isaias Rodriguez",
+        "",
+        "Graphics:",
+        "Isaias Rodriguez",
+        "",
+        "Special Thanks:",
+        "Chat GPT, Claude, PLC, ",
+        ""
+        "and all the creators of these tools that made this possible"
+        "",
+        ""
+        "Press SPACE to restart"
+    ]
+    for i, line in enumerate(credits):
+        screen.draw.text(line, center=(WIDTH/2, 50 + i * 30), fontsize=30, color="white")
 
 pgzrun.go()
